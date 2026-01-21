@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Modern Responsive Ludo</title>
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="ludo.css">
+  </head>
+  <body>
+    <h1>Ludo King</h1>
+
+    <div class="board-wrapper">
+      <div class="ludo-board" id="board">
+        <div class="base red">
+          <div class="base-inner" id="home-red"></div>
+        </div>
+        <div class="base green">
+          <div class="base-inner" id="home-green"></div>
+        </div>
+        <div class="base blue">
+          <div class="base-inner" id="home-blue"></div>
+        </div>
+        <div class="base yellow">
+          <div class="base-inner" id="home-yellow"></div>
+        </div>
+
+        <div class="home-center"></div>
+      </div>
+    </div>
+
+    <div class="controls">
+      <div class="turn-indicator" id="turn-text">Current Turn: RED</div>
+      <div class="dice-container" onclick="rollDice()">
+        <i class="fas fa-dice-one dice" id="dice-icon"></i>
+      </div>
+    </div>
+
+    <script src="ludo.js"></script>
+  </body>
+</html>
