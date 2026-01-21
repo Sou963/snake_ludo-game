@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Snake & Ladders (Scrollable)</title>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet" />
+  <link rel="stylesheet" href="snake.css">
+  
+</head>
+<body>
+
+  <h2>🐍 Snake & Ladders</h2>
+
+  <div class="game-container">
+    <div class="board-wrapper">
+      <div class="grid" id="grid"></div>
+      <svg class="graphics-layer" id="svg-layer"></svg>
+      
+      <div class="token p1-token" id="p1"></div>
+      <div class="token p2-token" id="p2"></div>
+    </div>
+
+    <div class="controls">
+      <div class="player-badge active" id="badge-p1" style="color: var(--p1-color)">
+        <i class="fas fa-user-circle fa-2x"></i>
+        <span>P1</span>
+      </div>
+      
+      <button class="dice-btn" onclick="rollDice()">
+        <i class="fas fa-dice" id="dice-icon"></i>
+      </button>
+      
+      <div class="player-badge" id="badge-p2" style="color: var(--p2-color)">
+        <i class="fas fa-user-circle fa-2x"></i>
+        <span>P2</span>
+      </div>
+    </div>
+  </div>
+<script src="snake.js"></script>
+
+</body>
+</html>
