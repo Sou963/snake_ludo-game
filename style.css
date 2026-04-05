@@ -1,96 +1,121 @@
 /* Custom Properties for Game Colors */
 :root {
-    --bg-dark: #121212;
-    --card-bg: #1e1e2e;
-    --snake-green: #2ecc71;
-    --ludo-blue: #3498db;
-    --text-white: #ffffff;
-    --accent-glow: rgba(255, 255, 255, 0.1);
+  --bg-dark: #121212;
+  --card-bg: #1e1e2e;
+  --snake-green: #2ecc71;
+  --ludo-blue: #3498db;
+  --text-white: #ffffff;
+  --accent-glow: rgba(255, 255, 255, 0.1);
 }
 
 /* Base Body Styling */
 body {
-     background: linear-gradient(135deg, #1f1c2c, #928dab);
-    color: var(--text-white);
-    font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    min-height: 100vh;
-    margin: 0;
-    overflow: hidden;
+  /* Dynamic gradient for better depth on mobile OLED screens */
+  background: linear-gradient(135deg, #1f1c2c, #928dab);
+  color: var(--text-white);
+  font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  margin: 0;
+  /* padding ensures content doesn't hit the screen edges on tiny phones */
+  padding: 20px;
+  overflow: hidden;
+  box-sizing: border-box;
 }
 
-/* Heading Style */
+/* Heading Style - Responsive with Clamp */
 h2 {
-    font-weight: 800;
-    font-size: 2.5rem;
-    margin-bottom: 40px;
-    text-transform: uppercase;
-    letter-spacing: 3px;
-    text-shadow: 0 0 15px rgba(255, 255, 255, 0.3);
+  font-weight: 800;
+  /* clamp(min, preferred, max) ensures font size is always perfect */
+  font-size: clamp(1.5rem, 8vw, 2.5rem); 
+  margin-bottom: clamp(20px, 10vh, 40px);
+  text-transform: uppercase;
+  letter-spacing: 3px;
+  text-align: center;
+  text-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
 }
 
 /* Menu Container */
 .menu {
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-    width: 90%;
-    max-width: 400px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+  max-width: 400px;
 }
 
 /* Game Button Styling */
 .btn-game {
-    display: block;
-    padding: 20px 30px;
-    font-size: 1.25rem;
-    font-weight: 600;
-    text-align: center;
-    text-decoration: none;
-    color: var(--text-white);
-    background: var(--card-bg);
-    border: 2px solid rgba(255, 255, 255, 0.1);
-    border-radius: 15px;
-    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
-    position: relative;
-    overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* 16px vertical padding is the "sweet spot" for thumb taps */
+  padding: 18px 30px;
+  font-size: 1.25rem;
+  font-weight: 600;
+  text-decoration: none;
+  color: var(--text-white);
+  background: var(--card-bg);
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  border-radius: 15px;
+  /* transition timing adjusted for snappier mobile feel */
+  transition: all 0.2s ease-out;
+  box-shadow: 0 6px 15px rgba(0, 0, 0, 0.3);
+  position: relative;
+  overflow: hidden;
+  /* Prevents the default blue highlight on mobile tap */
+  -webkit-tap-highlight-color: transparent;
 }
 
-/* Hover Effects */
-.btn-game:hover {
-    color: var(--text-white);
+/* --- INTERACTION LOGIC --- */
+
+/* Hover effects: Wrapped in a media query to only apply to devices with a mouse */
+@media (hover: hover) {
+  .btn-game:hover {
     transform: translateY(-5px) scale(1.03);
     border-color: rgba(255, 255, 255, 0.5);
     box-shadow: 0 15px 30px rgba(0, 0, 0, 0.5);
-}
+  }
 
-/* Specific Glow for Snake Game */
-.btn-game[href="snake-ludo.html"]:hover {
+  .btn-game[href="snake-ludo.html"]:hover {
     background: linear-gradient(135deg, #27ae60, var(--snake-green));
     box-shadow: 0 0 20px rgba(46, 204, 113, 0.4);
-}
+  }
 
-/* Specific Glow for Ludo Game */
-.btn-game[href="ludo.html"]:hover {
+  .btn-game[href="ludo.html"]:hover {
     background: linear-gradient(135deg, #2980b9, var(--ludo-blue));
     box-shadow: 0 0 20px rgba(52, 152, 219, 0.4);
+  }
 }
 
-/* Active State (Click) */
+/* Mobile Active State: Visual feedback when the user's thumb is pressing the button */
 .btn-game:active {
-    transform: translateY(0) scale(0.98);
+  transform: scale(0.96);
+  background: rgba(255, 255, 255, 0.15);
+  transition: all 0.1s;
 }
 
-/* Responsive Tweaks */
-@media (max-width: 480px) {
-    h2 {
-        font-size: 1.8rem;
-    }
-    .btn-game {
-        padding: 15px 20px;
-        font-size: 1.1rem;
-    }
+/* Specific feedback for mobile taps */
+.btn-game[href="snake-ludo.html"]:active {
+  background: var(--snake-green);
+}
+.btn-game[href="ludo.html"]:active {
+  background: var(--ludo-blue);
+}
+
+/* Extra Responsive Tweaks for very small screens (under 360px width) */
+@media (max-width: 360px) {
+  .btn-game {
+    padding: 14px 20px;
+    font-size: 1.1rem;
+    border-radius: 12px;
+  }
+}
+
+/* Global Box Sizing */
+* {
+  box-sizing: border-box;
 }
