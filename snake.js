@@ -1,289 +1,196 @@
-const board = document.getElementById("board");
-const players = ["green", "red"];
-const playerColors = { green: "#2ecc71", red: "#ff3c3c" };
-let turn = 0;
-let currentDiceValue = 0;
-let canRoll = true;
-
-// Define the standard path around the board (Row, Column)
-const outerPath = [
-  [7, 1],
-  [7, 2],
-  [7, 3],
-  [7, 4],
-  [7, 5],
-  [7, 6],
-  [6, 7],
-  [5, 7],
-  [4, 7],
-  [3, 7],
-  [2, 7],
-  [1, 7],
-  [1, 8],
-  [1, 9],
-  [2, 9],
-  [3, 9],
-  [4, 9],
-  [5, 9],
-  [6, 9],
-  [7, 10],
-  [7, 11],
-  [7, 12],
-  [7, 13],
-  [7, 14],
-  [7, 15],
-  [8, 15],
-  [9, 15],
-  [9, 14],
-  [9, 13],
-  [9, 12],
-  [9, 11],
-  [9, 10],
-  [10, 9],
-  [11, 9],
-  [12, 9],
-  [13, 9],
-  [14, 9],
-  [15, 9],
-  [15, 8],
-  [15, 7],
-  [14, 7],
-  [13, 7],
-  [12, 7],
-  [11, 7],
-  [10, 7],
-  [9, 6],
-  [9, 5],
-  [9, 4],
-  [9, 3],
-  [9, 2],
-  [9, 1],
-  [8, 1],
-];
-
-// ADJUSTED OFFSETS:
-// Green starts at index 1 (cell 7,2)
-// Red starts at index 27 (cell 9,14)
-const offsets = { green: 1, red: 27 };
-
-// Home stretch paths
-const homeStretches = {
-  green: [
-    [8, 2],
-    [8, 3],
-    [8, 4],
-    [8, 5],
-    [8, 6],
-    [8, 7],
-  ],
-  red: [
-    [8, 14],
-    [8, 13],
-    [8, 12],
-    [8, 11],
-    [8, 10],
-    [8, 9],
-  ],
+// Same logic as before, ensuring it works with the new layout
+const snakes = {
+  98: 28,
+  95: 56,
+  92: 51,
+  83: 19,
+  73: 1,
+  69: 33,
+  64: 36,
+  59: 17,
+  55: 7,
+  52: 11,
+  48: 9,
+  46: 5,
+  44: 22,
+};
+const ladders = {
+  8: 26,
+  21: 82,
+  43: 77,
+  50: 91,
+  54: 93,
+  62: 96,
+  66: 87,
+  80: 100,
 };
 
-/* --- 1. BOARD INITIALIZATION --- */
-for (let r = 1; r <= 15; r++) {
-  for (let c = 1; c <= 15; c++) {
-    if ((r > 6 && r < 10) || (c > 6 && c < 10)) {
-      if (r > 6 && r < 10 && c > 6 && c < 10) continue;
-      const cell = document.createElement("div");
-      cell.className = "cell";
-      cell.id = `cell-${r}-${c}`;
+const gridEl = document.getElementById("grid");
+const svgEl = document.getElementById("svg-layer");
 
-      if (r === 8 && c > 1 && c < 7) cell.classList.add("lane-green");
-      if (r === 8 && c > 9 && c < 15) cell.classList.add("lane-red");
+function initGrid() {
+  gridEl.innerHTML = "";
+  for (let i = 0; i < 100; i++) {
+    const rowFromTop = Math.floor(i / 10);
+    const rowFromBottom = 9 - rowFromTop;
+    const colFromLeft = i % 10;
+    let number =
+      rowFromBottom % 2 === 0
+        ? rowFromBottom * 10 + colFromLeft + 1
+        : rowFromBottom * 10 + (10 - colFromLeft);
 
-      const safeCoords = [
-        "7-2",
-        "2-9",
-        "9-14",
-        "14-7",
-        "1-8",
-        "8-15",
-        "15-8",
-        "8-1",
-      ];
-      if (safeCoords.includes(`${r}-${c}`)) {
-        cell.classList.add("safe-star");
-      }
-      board.appendChild(cell);
-    }
+    const cell = document.createElement("div");
+    cell.className = "cell";
+    if (number === 1) cell.classList.add("start");
+    if (number === 100) cell.classList.add("finish");
+    cell.id = `c-${number}`;
+    cell.innerText = number;
+    gridEl.appendChild(cell);
   }
 }
 
-/* --- 2. TOKEN INITIALIZATION --- */
-let tokens = [];
-players.forEach((p) => {
-  for (let i = 0; i < 4; i++) {
-    const tData = { color: p, id: i, pos: -1, state: "base" };
-    tokens.push(tData);
-    const tEl = document.createElement("div");
-    tEl.className = `token t-${p}`;
-    tEl.id = `t-${p}-${i}`;
-    tEl.onclick = () => handleTokenClick(tData);
-    document.getElementById(`home-${p}`).appendChild(tEl);
-  }
-});
+function getCenter(num) {
+  const cell = document.getElementById(`c-${num}`);
+  const rect = cell.getBoundingClientRect();
+  const wrapper = document
+    .querySelector(".board-wrapper")
+    .getBoundingClientRect();
+  return {
+    x: rect.left + rect.width / 2 - wrapper.left,
+    y: rect.top + rect.height / 2 - wrapper.top,
+    w: rect.width,
+  };
+}
 
-/* --- 3. DICE LOGIC --- */
-function rollDice() {
-  if (!canRoll) return;
-  canRoll = false;
-  const btn = document.getElementById("dice-btn");
-  btn.classList.add("rolling");
-
-  setTimeout(() => {
-    btn.classList.remove("rolling");
-    currentDiceValue = Math.floor(Math.random() * 6) + 1;
-    const icons = ["one", "two", "three", "four", "five", "six"];
-    document.getElementById("dice-icon").className = `fas fa-dice-${
-      icons[currentDiceValue - 1]
-    }`;
-
-    const legalMoves = tokens.filter(
-      (t) => t.color === players[turn] && canMove(t, currentDiceValue)
-    );
-    if (legalMoves.length === 0) {
-      setTimeout(nextTurn, 800);
-    } else {
-      legalMoves.forEach((t) =>
-        document.getElementById(`t-${t.color}-${t.id}`).classList.add("movable")
+function drawGraphics() {
+  svgEl.innerHTML = "";
+  for (let [start, end] of Object.entries(ladders)) {
+    const p1 = getCenter(start);
+    const p2 = getCenter(end);
+    const dx = p2.x - p1.x;
+    const dy = p2.y - p1.y;
+    const angle = Math.atan2(dy, dx);
+    const offsetX = p1.w * 0.2 * Math.sin(angle);
+    const offsetY = p1.w * 0.2 * Math.cos(angle);
+    const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+    const l1 = document.createElementNS("http://www.w3.org/2000/svg", "line");
+    l1.setAttribute("x1", p1.x - offsetX);
+    l1.setAttribute("y1", p1.y + offsetY);
+    l1.setAttribute("x2", p2.x - offsetX);
+    l1.setAttribute("y2", p2.y + offsetY);
+    l1.setAttribute("class", "ladder-rail");
+    const l2 = document.createElementNS("http://www.w3.org/2000/svg", "line");
+    l2.setAttribute("x1", p1.x + offsetX);
+    l2.setAttribute("y1", p1.y - offsetY);
+    l2.setAttribute("x2", p2.x + offsetX);
+    l2.setAttribute("y2", p2.y - offsetY);
+    l2.setAttribute("class", "ladder-rail");
+    g.appendChild(l1);
+    g.appendChild(l2);
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    const steps = Math.floor(dist / (p1.w * 0.4));
+    for (let i = 1; i < steps; i++) {
+      const t = i / steps;
+      const rung = document.createElementNS(
+        "http://www.w3.org/2000/svg",
+        "line"
       );
+      rung.setAttribute("x1", p1.x + dx * t - offsetX);
+      rung.setAttribute("y1", p1.y + dy * t + offsetY);
+      rung.setAttribute("x2", p1.x + dx * t + offsetX);
+      rung.setAttribute("y2", p1.y + dy * t - offsetY);
+      rung.setAttribute("class", "ladder-rung");
+      g.appendChild(rung);
     }
-  }, 500);
+    svgEl.appendChild(g);
+  }
+  for (let [start, end] of Object.entries(snakes)) {
+    const pHead = getCenter(start);
+    const pTail = getCenter(end);
+    const cpX = (pHead.x + pTail.x) / 2 + (Math.random() > 0.5 ? 40 : -40);
+    const cpY = (pHead.y + pTail.y) / 2;
+    const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    path.setAttribute(
+      "d",
+      `M ${pHead.x} ${pHead.y} Q ${cpX} ${cpY} ${pTail.x} ${pTail.y}`
+    );
+    path.setAttribute("class", "snake-body");
+    const head = document.createElementNS(
+      "http://www.w3.org/2000/svg",
+      "circle"
+    );
+    head.setAttribute("cx", pHead.x);
+    head.setAttribute("cy", pHead.y);
+    head.setAttribute("r", pHead.w * 0.3);
+    head.setAttribute("class", "snake-head");
+    g.appendChild(path);
+    g.appendChild(head);
+    svgEl.appendChild(g);
+  }
 }
 
-function canMove(token, dice) {
-  if (token.state === "finished") return false;
-  if (token.state === "base" && dice !== 6) return false;
-  if (token.pos + dice > 56) return false;
-  return true;
+let positions = { p1: 1, p2: 1 };
+let turn = "p1";
+let isMoving = false;
+
+function updateToken(player) {
+  const el = document.getElementById(player);
+  const center = getCenter(positions[player]);
+  el.style.left = center.x - el.offsetWidth / 2 + "px";
+  el.style.top = center.y - el.offsetHeight / 2 + "px";
 }
 
-/* --- 4. MOVEMENT & GAME RULES --- */
-function handleTokenClick(token) {
-  if (
-    token.color !== players[turn] ||
-    currentDiceValue === 0 ||
-    !canMove(token, currentDiceValue)
-  )
+function rollDice() {
+  if (isMoving) return;
+  isMoving = true;
+  const btn = document.getElementById("dice-icon");
+  btn.className = "fas fa-dice fa-spin";
+  setTimeout(() => {
+    const roll = Math.floor(Math.random() * 6) + 1;
+    const icons = ["one", "two", "three", "four", "five", "six"];
+    btn.className = `fas fa-dice-${icons[roll - 1]}`;
+    movePlayer(roll);
+  }, 600);
+}
+
+function movePlayer(steps) {
+  let next = positions[turn] + steps;
+  if (next > 100) {
+    isMoving = false;
+    switchTurn();
     return;
-  document
-    .querySelectorAll(".token")
-    .forEach((t) => t.classList.remove("movable"));
-
-  let earnedExtraTurn = currentDiceValue === 6;
-
-  if (token.state === "base" && currentDiceValue === 6) {
-    token.state = "track";
-    token.pos = 0; // Starts at index 0 relative to its offset
-  } else {
-    token.pos += currentDiceValue;
-    if (token.pos >= 51 && token.pos < 56) {
-      token.state = "homeStretch";
-    } else if (token.pos === 56) {
-      token.state = "finished";
-      earnedExtraTurn = true;
+  }
+  positions[turn] = next;
+  updateToken(turn);
+  setTimeout(() => {
+    if (snakes[next]) positions[turn] = snakes[next];
+    else if (ladders[next]) positions[turn] = ladders[next];
+    updateToken(turn);
+    if (positions[turn] === 100) {
+      alert(turn.toUpperCase() + " WINS!");
+      location.reload();
     } else {
-      token.state = "track";
-      if (checkCapture(token)) earnedExtraTurn = true;
+      if (steps !== 6) switchTurn();
+      isMoving = false;
     }
-  }
-
-  updateVisual(token);
-  if (earnedExtraTurn && token.state !== "finished") {
-    resetDice();
-  } else {
-    nextTurn();
-  }
-  checkWin();
+  }, 600);
 }
 
-function checkCapture(movingToken) {
-  let captured = false;
-  const myIdx = (movingToken.pos + offsets[movingToken.color]) % 52;
-  const [r, c] = outerPath[myIdx];
-  const cellId = `cell-${r}-${c}`;
-
-  if (document.getElementById(cellId).classList.contains("safe-star"))
-    return false;
-
-  tokens.forEach((other) => {
-    if (other.color !== movingToken.color && other.state === "track") {
-      const otherIdx = (other.pos + offsets[other.color]) % 52;
-      if (otherIdx === myIdx) {
-        other.state = "base";
-        other.pos = -1;
-        updateVisual(other);
-        captured = true;
-      }
-    }
-  });
-  return captured;
+function switchTurn() {
+  turn = turn === "p1" ? "p2" : "p1";
+  document.getElementById("badge-p1").classList.toggle("active");
+  document.getElementById("badge-p2").classList.toggle("active");
 }
 
-/* --- 5. VISUAL UPDATES --- */
-function updateVisual(t) {
-  const el = document.getElementById(`t-${t.color}-${t.id}`);
-  let target;
-
-  if (t.state === "base") {
-    target = document.getElementById(`home-${t.color}`);
-  } else if (t.state === "track") {
-    const idx = (t.pos + offsets[t.color]) % 52;
-    const [r, c] = outerPath[idx];
-    target = document.getElementById(`cell-${r}-${c}`);
-  } else if (t.state === "homeStretch") {
-    const [r, c] = homeStretches[t.color][t.pos - 51];
-    target = document.getElementById(`cell-${r}-${c}`);
-  } else {
-    el.style.display = "none";
-  }
-
-  if (target) {
-    target.appendChild(el);
-    const tokensInCell = target.querySelectorAll(".token");
-    const size = tokensInCell.length > 1 ? "45%" : "85%";
-    tokensInCell.forEach((token) => {
-      token.style.width = size;
-      token.style.height = size;
-    });
-  }
-}
-
-/* --- 6. TURN MANAGEMENT --- */
-function nextTurn() {
-  turn = (turn + 1) % players.length;
-  resetDice();
-  const activePlayer = players[turn];
-  const hex = playerColors[activePlayer];
-  const panel = document.getElementById("ui-panel");
-  const text = document.getElementById("turn-text");
-  const btn = document.getElementById("dice-btn");
-
-  text.innerText = `${activePlayer.toUpperCase()}'S TURN`;
-  text.className = `turn-indicator ${activePlayer}-text`;
-  panel.className = `ui-panel ${activePlayer}-pos`;
-  btn.style.color = hex;
-}
-
-function resetDice() {
-  currentDiceValue = 0;
-  canRoll = true;
-}
-
-function checkWin() {
-  const p = players[turn];
-  const finishedCount = tokens.filter(
-    (t) => t.color === p && t.state === "finished"
-  ).length;
-  if (finishedCount === 4) {
-    alert(p.toUpperCase() + " WINS THE MATCH!");
-    location.reload();
-  }
-}
+initGrid();
+window.onload = () => {
+  drawGraphics();
+  updateToken("p1");
+  updateToken("p2");
+};
+window.onresize = () => {
+  drawGraphics();
+  updateToken("p1");
+  updateToken("p2");
+};
