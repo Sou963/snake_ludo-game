@@ -5,6 +5,7 @@ let turn = 0;
 let currentDiceValue = 0;
 let canRoll = true;
 
+// Define the standard path around the board (Row, Column)
 const outerPath = [
   [7, 1],
   [7, 2],
@@ -60,7 +61,12 @@ const outerPath = [
   [8, 1],
 ];
 
-const offsets = { green: 0, red: 26 };
+// ADJUSTED OFFSETS:
+// Green starts at index 1 (cell 7,2)
+// Red starts at index 27 (cell 9,14)
+const offsets = { green: 1, red: 27 };
+
+// Home stretch paths
 const homeStretches = {
   green: [
     [8, 2],
@@ -80,7 +86,7 @@ const homeStretches = {
   ],
 };
 
-// Create Grid Cells
+/* --- 1. BOARD INITIALIZATION --- */
 for (let r = 1; r <= 15; r++) {
   for (let c = 1; c <= 15; c++) {
     if ((r > 6 && r < 10) || (c > 6 && c < 10)) {
@@ -89,16 +95,20 @@ for (let r = 1; r <= 15; r++) {
       cell.className = "cell";
       cell.id = `cell-${r}-${c}`;
 
-      // Style Home Lanes
       if (r === 8 && c > 1 && c < 7) cell.classList.add("lane-green");
       if (r === 8 && c > 9 && c < 15) cell.classList.add("lane-red");
 
-      // Safe Spots
-      if (
-        ["7-3", "3-9", "9-13", "13-7", "1-8", "8-14", "15-8", "8-2"].includes(
-          `${r}-${c}`
-        )
-      ) {
+      const safeCoords = [
+        "7-2",
+        "2-9",
+        "9-14",
+        "14-7",
+        "1-8",
+        "8-15",
+        "15-8",
+        "8-1",
+      ];
+      if (safeCoords.includes(`${r}-${c}`)) {
         cell.classList.add("safe-star");
       }
       board.appendChild(cell);
@@ -106,6 +116,7 @@ for (let r = 1; r <= 15; r++) {
   }
 }
 
+/* --- 2. TOKEN INITIALIZATION --- */
 let tokens = [];
 players.forEach((p) => {
   for (let i = 0; i < 4; i++) {
@@ -119,6 +130,7 @@ players.forEach((p) => {
   }
 });
 
+/* --- 3. DICE LOGIC --- */
 function rollDice() {
   if (!canRoll) return;
   canRoll = false;
@@ -153,6 +165,7 @@ function canMove(token, dice) {
   return true;
 }
 
+/* --- 4. MOVEMENT & GAME RULES --- */
 function handleTokenClick(token) {
   if (
     token.color !== players[turn] ||
@@ -164,75 +177,94 @@ function handleTokenClick(token) {
     .querySelectorAll(".token")
     .forEach((t) => t.classList.remove("movable"));
 
-  let extraTurn = currentDiceValue === 6;
+  let earnedExtraTurn = currentDiceValue === 6;
 
   if (token.state === "base" && currentDiceValue === 6) {
     token.state = "track";
-    token.pos = 0;
+    token.pos = 0; // Starts at index 0 relative to its offset
   } else {
     token.pos += currentDiceValue;
-    if (token.pos > 50 && token.pos < 56) token.state = "homeStretch";
-    else if (token.pos === 56) {
+    if (token.pos >= 51 && token.pos < 56) {
+      token.state = "homeStretch";
+    } else if (token.pos === 56) {
       token.state = "finished";
-      extraTurn = true;
-    } else token.state = "track";
-
-    if (token.state === "track") checkCapture(token);
+      earnedExtraTurn = true;
+    } else {
+      token.state = "track";
+      if (checkCapture(token)) earnedExtraTurn = true;
+    }
   }
 
   updateVisual(token);
-  if (extraTurn) resetDice();
-  else nextTurn();
+  if (earnedExtraTurn && token.state !== "finished") {
+    resetDice();
+  } else {
+    nextTurn();
+  }
   checkWin();
 }
 
 function checkCapture(movingToken) {
+  let captured = false;
   const myIdx = (movingToken.pos + offsets[movingToken.color]) % 52;
+  const [r, c] = outerPath[myIdx];
+  const cellId = `cell-${r}-${c}`;
+
+  if (document.getElementById(cellId).classList.contains("safe-star"))
+    return false;
+
   tokens.forEach((other) => {
     if (other.color !== movingToken.color && other.state === "track") {
       const otherIdx = (other.pos + offsets[other.color]) % 52;
       if (otherIdx === myIdx) {
-        const [r, c] = outerPath[myIdx];
-        if (
-          !document
-            .getElementById(`cell-${r}-${c}`)
-            .classList.contains("safe-star")
-        ) {
-          other.state = "base";
-          other.pos = -1;
-          updateVisual(other);
-        }
+        other.state = "base";
+        other.pos = -1;
+        updateVisual(other);
+        captured = true;
       }
     }
   });
+  return captured;
 }
 
+/* --- 5. VISUAL UPDATES --- */
 function updateVisual(t) {
   const el = document.getElementById(`t-${t.color}-${t.id}`);
   let target;
-  if (t.state === "base") target = document.getElementById(`home-${t.color}`);
-  else if (t.state === "track") {
+
+  if (t.state === "base") {
+    target = document.getElementById(`home-${t.color}`);
+  } else if (t.state === "track") {
     const idx = (t.pos + offsets[t.color]) % 52;
-    target = document.getElementById(
-      `cell-${outerPath[idx][0]}-${outerPath[idx][1]}`
-    );
+    const [r, c] = outerPath[idx];
+    target = document.getElementById(`cell-${r}-${c}`);
   } else if (t.state === "homeStretch") {
     const [r, c] = homeStretches[t.color][t.pos - 51];
     target = document.getElementById(`cell-${r}-${c}`);
   } else {
     el.style.display = "none";
   }
-  if (target) target.appendChild(el);
+
+  if (target) {
+    target.appendChild(el);
+    const tokensInCell = target.querySelectorAll(".token");
+    const size = tokensInCell.length > 1 ? "45%" : "85%";
+    tokensInCell.forEach((token) => {
+      token.style.width = size;
+      token.style.height = size;
+    });
+  }
 }
 
+/* --- 6. TURN MANAGEMENT --- */
 function nextTurn() {
-  turn = (turn + 1) % 2;
+  turn = (turn + 1) % players.length;
   resetDice();
   const activePlayer = players[turn];
   const hex = playerColors[activePlayer];
   const panel = document.getElementById("ui-panel");
-  const btn = document.getElementById("dice-btn");
   const text = document.getElementById("turn-text");
+  const btn = document.getElementById("dice-btn");
 
   text.innerText = `${activePlayer.toUpperCase()}'S TURN`;
   text.className = `turn-indicator ${activePlayer}-text`;
@@ -247,9 +279,10 @@ function resetDice() {
 
 function checkWin() {
   const p = players[turn];
-  if (
-    tokens.filter((t) => t.color === p && t.state === "finished").length === 4
-  ) {
+  const finishedCount = tokens.filter(
+    (t) => t.color === p && t.state === "finished"
+  ).length;
+  if (finishedCount === 4) {
     alert(p.toUpperCase() + " WINS THE MATCH!");
     location.reload();
   }
